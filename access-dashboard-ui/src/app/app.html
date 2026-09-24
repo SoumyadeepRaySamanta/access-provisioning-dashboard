@@ -1,0 +1,47 @@
+<div class="dashboard-container">
+  <h1>Role-Based Access Provisioning Dashboard</h1>
+
+  <div class="form-section">
+    <h2>Provision New User</h2>
+    <!-- Removed <form> and ngSubmit so it triggers instantly on click -->
+    <div class="form-group">
+      <input type="email" name="email" [(ngModel)]="newUser.email" placeholder="Employee Email">
+      <input type="text" name="department" [(ngModel)]="newUser.department" placeholder="Department">
+      <input type="text" name="accessRole" [(ngModel)]="newUser.accessRole" placeholder="Access Role">
+      <label>
+        <input type="checkbox" name="isActive" [(ngModel)]="newUser.isActive"> Active Account
+      </label>
+      <button type="button" (click)="addUser()">Grant Access</button>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <h2>Current Access Roster</h2>
+    <table border="1" cellpadding="10" style="width: 100%; text-align: left; border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #f2f2f2;">
+          <th>ID</th>
+          <th>Email</th>
+          <th>Department</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.department }}</td>
+          <td>{{ user.accessRole }}</td>
+          <td>{{ user.isActive ? 'Active' : 'Inactive' }}</td>
+          <td>
+            <button (click)="deleteUser(user.id!)" style="color: red;">Revoke Access</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<router-outlet></router-outlet>
