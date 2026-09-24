@@ -1,2 +1,14 @@
 /.github
 /.vscode
+# Angular
+/node_modules/
+/dist/
+/.angular/
+
+# Spring Boot / Java
+/target/
+*.class
+.settings/
+.vscode/
+.idea/
+*.log
