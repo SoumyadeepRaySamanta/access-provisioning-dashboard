@@ -1,46 +1,590 @@
-<div class="dashboard-container">
-  <h1>Role-Based Access Provisioning Dashboard</h1>
+<!-- Toast Notification -->
+<div class="toast" [class.toast--visible]="toastVisible" [class.toast--success]="toastType === 'success'" [class.toast--error]="toastType === 'error'" [class.toast--info]="toastType === 'info'" role="alert" aria-live="polite">
+  <span class="material-icons-round toast__icon">
+    {{ toastType === 'success' ? 'check_circle' : toastType === 'error' ? 'error' : 'info' }}
+  </span>
+  <span class="toast__msg">{{ toastMessage }}</span>
+</div>
 
-  <div class="form-section">
-    <h2>Provision New User</h2>
-    <!-- Removed <form> and ngSubmit so it triggers instantly on click -->
-    <div class="form-group">
-      <input type="email" name="email" [(ngModel)]="newUser.email" placeholder="Employee Email">
-      <input type="text" name="department" [(ngModel)]="newUser.department" placeholder="Department">
-      <input type="text" name="accessRole" [(ngModel)]="newUser.accessRole" placeholder="Access Role">
-      <label>
-        <input type="checkbox" name="isActive" [(ngModel)]="newUser.isActive"> Active Account
-      </label>
-      <button type="button" (click)="addUser()">Grant Access</button>
+<!-- ===== APP SHELL ===== -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <div class="sidebar__logo">
+        <span class="material-icons-round">shield</span>
+      </div>
+      <div class="sidebar__brand-text">
+        <span class="sidebar__brand-name">CampusShare</span>
+        <span class="sidebar__brand-sub">User Management</span>
+      </div>
+    </div>
+
+    <nav class="sidebar__nav">
+      <a class="sidebar__nav-item" [class.sidebar__nav-item--active]="activeTab === 'Dashboard'" href="#" (click)="switchTab('Dashboard', $event)" aria-label="Dashboard">
+        <span class="material-icons-round">dashboard</span>
+        <span>Dashboard</span>
+      </a>
+      <a class="sidebar__nav-item" [class.sidebar__nav-item--active]="activeTab === 'Users'" href="#" (click)="switchTab('Users', $event)" aria-label="Users">
+        <span class="material-icons-round">group</span>
+        <span>Users</span>
+      </a>
+      <a class="sidebar__nav-item" [class.sidebar__nav-item--active]="activeTab === 'Access Roles'" href="#" (click)="switchTab('Access Roles', $event)" aria-label="Access Roles">
+        <span class="material-icons-round">manage_accounts</span>
+        <span>Access Roles</span>
+      </a>
+      <a class="sidebar__nav-item" [class.sidebar__nav-item--active]="activeTab === 'Audit Log'" href="#" (click)="switchTab('Audit Log', $event)" aria-label="Audit Log">
+        <span class="material-icons-round">history</span>
+        <span>Audit Log</span>
+      </a>
+      <a class="sidebar__nav-item" [class.sidebar__nav-item--active]="activeTab === 'Settings'" href="#" (click)="switchTab('Settings', $event)" aria-label="Settings">
+        <span class="material-icons-round">settings</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="sidebar__status-dot"></div>
+      <span>All Systems Operational</span>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="topbar__left">
+        <h1 class="topbar__title">Access Dashboard</h1>
+        <span class="topbar__subtitle">User Management System</span>
+      </div>
+      <div class="topbar__actions">
+        <div class="topbar__live">
+          <span class="topbar__live-dot"></span>
+          <span>Live</span>
+        </div>
+        <button id="btn-provision-new" class="btn btn--primary" (click)="showProvisionModal = true; resetNewUserForm()">
+          <span class="material-icons-round">person_add</span>
+          Add New User
+        </button>
+      </div>
+    </header>
+
+    <!-- ANALYTICS CARDS -->
+    <section class="metrics-grid" aria-label="Dashboard Analytics" *ngIf="activeTab === 'Dashboard'">
+
+      <div class="metric-card metric-card--blue">
+        <div class="metric-card__icon">
+          <span class="material-icons-round">group</span>
+        </div>
+        <div class="metric-card__body">
+          <span class="metric-card__label">Total Users</span>
+          <span class="metric-card__value">{{ totalUsers }}</span>
+        </div>
+        <div class="metric-card__glow"></div>
+      </div>
+
+      <div class="metric-card metric-card--green">
+        <div class="metric-card__icon">
+          <span class="material-icons-round">verified_user</span>
+        </div>
+        <div class="metric-card__body">
+          <span class="metric-card__label">Active Accounts</span>
+          <span class="metric-card__value">{{ activeUsers }}
+            <span class="metric-card__pct">{{ activePercent }}%</span>
+          </span>
+        </div>
+        <div class="metric-card__glow"></div>
+      </div>
+
+      <div class="metric-card metric-card--orange">
+        <div class="metric-card__icon">
+          <span class="material-icons-round">person_off</span>
+        </div>
+        <div class="metric-card__body">
+          <span class="metric-card__label">Inactive Accounts</span>
+          <span class="metric-card__value">{{ inactiveUsers }}</span>
+        </div>
+        <div class="metric-card__glow"></div>
+      </div>
+
+      <div class="metric-card metric-card--purple">
+        <div class="metric-card__icon">
+          <span class="material-icons-round">corporate_fare</span>
+        </div>
+        <div class="metric-card__body">
+          <span class="metric-card__label">Departments</span>
+          <span class="metric-card__value">{{ uniqueDepartments.length }}</span>
+        </div>
+        <div class="metric-card__glow"></div>
+      </div>
+
+    </section>
+
+    <!-- ANALYTICS PANELS -->
+    <section class="analytics-row" aria-label="Analytics Breakdown" *ngIf="activeTab === 'Dashboard'">
+
+      <div class="analytics-panel">
+        <h2 class="panel-title">
+          <span class="material-icons-round">pie_chart</span>
+          Department Distribution
+        </h2>
+        <div class="dept-list">
+          <div *ngIf="departmentBreakdown.length === 0" class="empty-state-small">No data yet</div>
+          <div class="dept-item" *ngFor="let dept of departmentBreakdown">
+            <div class="dept-item__header">
+              <span class="dept-item__name">{{ dept.name }}</span>
+              <span class="dept-item__count">{{ dept.count }} users</span>
+            </div>
+            <div class="dept-item__bar-track">
+              <div class="dept-item__bar-fill" [style.width.%]="dept.percent"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-panel">
+        <h2 class="panel-title">
+          <span class="material-icons-round">manage_accounts</span>
+          Role Distribution
+        </h2>
+        <div class="role-breakdown">
+          <div *ngIf="roleBreakdown.length === 0" class="empty-state-small">No data yet</div>
+          <div class="role-chip-group">
+            <div class="role-stat-item" *ngFor="let r of roleBreakdown">
+              <span class="badge" [ngClass]="getRoleBadgeClass(r.role)">{{ r.role }}</span>
+              <span class="role-stat-count">{{ r.count }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="active-gauge">
+          <svg viewBox="0 0 100 50" class="gauge-svg" aria-hidden="true">
+            <path d="M 5 50 A 45 45 0 0 1 95 50" stroke="rgba(255,255,255,0.06)" stroke-width="10" fill="none"/>
+            <path d="M 5 50 A 45 45 0 0 1 95 50"
+              stroke="url(#gaugeGrad)" stroke-width="10" fill="none"
+              stroke-dasharray="141"
+              [attr.stroke-dashoffset]="141 - (141 * activePercent / 100)"/>
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#43e97b"/>
+                <stop offset="100%" stop-color="#38f9d7"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="gauge-label">
+            <span class="gauge-pct">{{ activePercent }}%</span>
+            <span class="gauge-sub">Active</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- USER ROSTER TABLE -->
+    <section class="table-section" aria-label="User List" *ngIf="activeTab === 'Dashboard' || activeTab === 'Users'">
+
+      <div class="table-header">
+        <h2 class="panel-title">
+          <span class="material-icons-round">table_view</span>
+          User List
+          <span class="table-header__count">{{ filteredUsers.length }} / {{ totalUsers }}</span>
+        </h2>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="filter-bar__search">
+          <span class="material-icons-round filter-bar__search-icon">search</span>
+          <input
+            id="input-search"
+            class="filter-bar__input"
+            type="text"
+            placeholder="Search by email, role, or department..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="applyFilters()"
+            aria-label="Search users"
+          >
+          <button *ngIf="searchQuery" class="filter-bar__clear-btn" (click)="searchQuery=''; applyFilters()" aria-label="Clear search">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <select id="filter-role" class="filter-select" [(ngModel)]="filterRole" (ngModelChange)="applyFilters()" aria-label="Filter by role">
+          <option value="">All Roles</option>
+          <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
+        </select>
+
+        <select id="filter-status" class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()" aria-label="Filter by status">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        <select id="filter-dept" class="filter-select" [(ngModel)]="filterDept" (ngModelChange)="applyFilters()" aria-label="Filter by department">
+          <option value="">All Depts</option>
+          <option *ngFor="let d of uniqueDepartments" [value]="d">{{ d }}</option>
+        </select>
+
+        <button *ngIf="hasActiveFilters" class="btn btn--ghost btn--sm" (click)="clearFilters()">
+          <span class="material-icons-round">filter_alt_off</span>
+          Clear
+        </button>
+      </div>
+
+      <!-- Loading state -->
+      <div *ngIf="isLoading" class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading users...</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper" *ngIf="!isLoading">
+        <table class="data-table" aria-label="User list">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">User</th>
+              <th scope="col">Department</th>
+              <th scope="col">Access Role</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredUsers; let i = index; trackBy: trackByUserId" class="data-table__row">
+              <td class="data-table__num">{{ i + 1 }}</td>
+              <td class="data-table__user">
+                <div class="user-cell">
+                  <div class="user-avatar" [style.background]="getAvatarGradient(user.email)">
+                    {{ getUserInitials(user.email) }}
+                  </div>
+                  <span class="user-email">{{ user.email }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="dept-tag">{{ user.department }}</span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getRoleBadgeClass(user.accessRole)">
+                  {{ user.accessRole }}
+                </span>
+              </td>
+              <td>
+                <button
+                  class="status-toggle"
+                  [class.status-toggle--active]="user.isActive"
+                  [class.status-toggle--inactive]="!user.isActive"
+                  (click)="toggleUserStatus(user)"
+                  [title]="user.isActive ? 'Click to deactivate' : 'Click to activate'"
+                  [id]="'btn-toggle-' + user.id"
+                >
+                  <span class="status-toggle__dot"></span>
+                  {{ user.isActive ? 'Active' : 'Inactive' }}
+                </button>
+              </td>
+              <td class="data-table__actions">
+                <button class="action-btn action-btn--edit" (click)="openEditModal(user)" [id]="'btn-edit-' + user.id" title="Edit user">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="action-btn action-btn--delete" (click)="confirmDelete(user.id!)" [id]="'btn-delete-' + user.id" title="Delete user">
+                  <span class="material-icons-round">delete_outline</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Empty state -->
+        <div *ngIf="filteredUsers.length === 0 && !isLoading" class="empty-state">
+          <span class="material-icons-round empty-state__icon">manage_search</span>
+          <p class="empty-state__title">
+            {{ hasActiveFilters ? 'No records match your filters' : 'No users added yet' }}
+          </p>
+          <p class="empty-state__sub">
+            {{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Click "Add New User" to get started.' }}
+          </p>
+          <button *ngIf="hasActiveFilters" class="btn btn--ghost" (click)="clearFilters()">Clear Filters</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ACCESS ROLES -->
+    <section class="roles-section" *ngIf="activeTab === 'Access Roles'" aria-label="Access Roles Management">
+      <div class="table-header">
+        <h2 class="panel-title">
+          <span class="material-icons-round">manage_accounts</span>
+          Role Configurations
+        </h2>
+      </div>
+      <div class="roles-grid">
+        <div class="role-card" *ngFor="let role of accessRolesList">
+          <div class="role-card__header">
+            <h3 class="role-card__title">{{ role.name }}</h3>
+            <span class="role-card__users">{{ role.users }} users</span>
+          </div>
+          <p class="role-card__desc">{{ role.desc }}</p>
+          <div class="role-card__perms">
+            <span class="perm-chip" *ngFor="let perm of role.perms">{{ perm }}</span>
+          </div>
+          <button class="btn btn--ghost btn--sm role-card__edit">Edit Role</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUDIT LOG -->
+    <section class="audit-section" *ngIf="activeTab === 'Audit Log'" aria-label="Audit Logs">
+      <div class="table-header">
+        <h2 class="panel-title">
+          <span class="material-icons-round">history</span>
+          System Audit Log
+        </h2>
+        <button class="btn btn--ghost btn--sm"><span class="material-icons-round">download</span> Export CSV</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>Initiated By</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of auditLogs" class="data-table__row">
+              <td class="log-time">{{ log.time }}</td>
+              <td>
+                <span class="badge" [ngClass]="{'badge--admin': log.action === 'ADD_USER', 'badge--viewer': log.action === 'LOGIN_ATTEMPT', 'badge--manager': log.action === 'UPDATE', 'badge--danger': log.action === 'DELETE_USER'}">
+                  {{ log.action }}
+                </span>
+              </td>
+              <td>{{ log.user }}</td>
+              <td class="log-details">{{ log.details }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="settings-section" *ngIf="activeTab === 'Settings'" aria-label="Global Settings">
+      <div class="table-header">
+        <h2 class="panel-title">
+          <span class="material-icons-round">settings</span>
+          Global Preferences
+        </h2>
+      </div>
+      <div class="settings-grid">
+        <div class="settings-panel">
+          <h3 class="settings-panel__title">Security</h3>
+          <div class="form-group settings-group">
+            <label class="toggle-label" for="set-mfa">
+              <div class="toggle-switch">
+                <input id="set-mfa" type="checkbox" [(ngModel)]="settingsState.mfa" class="toggle-input">
+                <span class="toggle-track"></span>
+              </div>
+              <div class="settings-label-text">
+                <span>Require Multi-Factor Authentication</span>
+                <small>Enforce 2FA for all dashboard administrators.</small>
+              </div>
+            </label>
+          </div>
+          <div class="form-group settings-group">
+            <label class="form-label" for="set-timeout">Session Timeout (minutes)</label>
+            <div class="input-wrapper" style="max-width: 150px;">
+              <span class="material-icons-round input-icon">timer</span>
+              <select id="set-timeout" class="form-input form-select" [(ngModel)]="settingsState.sessionTimeout">
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="60">60</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-panel">
+          <h3 class="settings-panel__title">Automations</h3>
+          <div class="form-group settings-group">
+            <label class="toggle-label" for="set-alerts">
+              <div class="toggle-switch">
+                <input id="set-alerts" type="checkbox" [(ngModel)]="settingsState.emailAlerts" class="toggle-input">
+                <span class="toggle-track"></span>
+              </div>
+              <div class="settings-label-text">
+                <span>Email Notifications</span>
+                <small>Send alerts for critical access changes.</small>
+              </div>
+            </label>
+          </div>
+          <div class="form-group settings-group">
+            <label class="toggle-label" for="set-revoke">
+              <div class="toggle-switch">
+                <input id="set-revoke" type="checkbox" [(ngModel)]="settingsState.autoRevoke" class="toggle-input">
+                <span class="toggle-track"></span>
+              </div>
+              <div class="settings-label-text">
+                <span>Auto-Delete Inactive Users</span>
+                <small>Automatically delete users if no login for 90 days.</small>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== PROVISION MODAL ===== -->
+<div class="modal-overlay" [class.modal-overlay--visible]="showProvisionModal" (click)="showProvisionModal = false" role="dialog" aria-modal="true" aria-labelledby="modal-provision-title">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal__header">
+      <div class="modal__title-group">
+        <span class="material-icons-round modal__icon">person_add</span>
+        <h2 id="modal-provision-title" class="modal__title">Add New User</h2>
+      </div>
+      <button class="modal__close" (click)="showProvisionModal = false" aria-label="Close modal">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label" for="provision-email">Employee Email <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <span class="material-icons-round input-icon">email</span>
+          <input id="provision-email" class="form-input" type="email" [(ngModel)]="newUser.email" placeholder="employee@company.com" autocomplete="off">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="provision-dept">Department <span class="required">*</span></label>
+          <div class="input-wrapper">
+            <span class="material-icons-round input-icon">corporate_fare</span>
+            <select id="provision-dept" class="form-input form-select" [(ngModel)]="newUser.department">
+              <option value="">Select Department</option>
+              <option *ngFor="let d of departmentOptions" [value]="d">{{ d }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="provision-role">Access Role</label>
+          <div class="input-wrapper">
+            <span class="material-icons-round input-icon">manage_accounts</span>
+            <select id="provision-role" class="form-input form-select" [(ngModel)]="newUser.accessRole">
+              <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="toggle-label" for="provision-active">
+          <div class="toggle-switch">
+            <input id="provision-active" type="checkbox" [(ngModel)]="newUser.isActive" class="toggle-input">
+            <span class="toggle-track"></span>
+          </div>
+          <span>Activate Account Now</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" (click)="showProvisionModal = false">Cancel</button>
+      <button id="btn-grant-access" class="btn btn--primary" (click)="provisionUser()">
+        <span class="material-icons-round">person_add</span>
+        Add User
+      </button>
     </div>
   </div>
+</div>
 
-  <div class="table-section">
-    <h2>Current Access Roster</h2>
-    <table border="1" cellpadding="10" style="width: 100%; text-align: left; border-collapse: collapse;">
-      <thead>
-        <tr style="background-color: #f2f2f2;">
-          <th>ID</th>
-          <th>Email</th>
-          <th>Department</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let user of users; let i = index">
-          <td>{{ i + 1 }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.department }}</td>
-          <td>{{ user.accessRole }}</td>
-          <td>{{ user.isActive ? 'Active' : 'Inactive' }}</td>
-          <td>
-            <button (click)="deleteUser(user.id!)" style="color: red;">Revoke Access</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+<!-- ===== EDIT MODAL ===== -->
+<div class="modal-overlay" [class.modal-overlay--visible]="showEditModal" (click)="closeEditModal()" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+  <div class="modal" (click)="$event.stopPropagation()" *ngIf="editingUser">
+    <div class="modal__header">
+      <div class="modal__title-group">
+        <span class="material-icons-round modal__icon modal__icon--purple">edit</span>
+        <h2 id="modal-edit-title" class="modal__title">Edit User Access</h2>
+      </div>
+      <button class="modal__close" (click)="closeEditModal()" aria-label="Close modal">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="modal__body">
+      <div class="modal__user-preview">
+        <div class="user-avatar user-avatar--lg" [style.background]="getAvatarGradient(editingUser.email)">
+          {{ getUserInitials(editingUser.email) }}
+        </div>
+        <span class="modal__user-email">{{ editingUser.email }}</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="edit-email">Email Address</label>
+        <div class="input-wrapper">
+          <span class="material-icons-round input-icon">email</span>
+          <input id="edit-email" class="form-input" type="email" [(ngModel)]="editingUser.email">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="edit-dept">Department</label>
+          <div class="input-wrapper">
+            <span class="material-icons-round input-icon">corporate_fare</span>
+            <select id="edit-dept" class="form-input form-select" [(ngModel)]="editingUser.department">
+              <option *ngFor="let d of departmentOptions" [value]="d">{{ d }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-role">Access Role</label>
+          <div class="input-wrapper">
+            <span class="material-icons-round input-icon">manage_accounts</span>
+            <select id="edit-role" class="form-input form-select" [(ngModel)]="editingUser.accessRole">
+              <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="toggle-label" for="edit-active">
+          <div class="toggle-switch">
+            <input id="edit-active" type="checkbox" [(ngModel)]="editingUser.isActive" class="toggle-input">
+            <span class="toggle-track"></span>
+          </div>
+          <span>Account Active</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" (click)="closeEditModal()">Cancel</button>
+      <button id="btn-save-edit" class="btn btn--primary" (click)="saveEdit()">
+        <span class="material-icons-round">save</span>
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DELETE CONFIRM MODAL ===== -->
+<div class="modal-overlay" [class.modal-overlay--visible]="showDeleteConfirm" (click)="cancelDelete()" role="alertdialog" aria-modal="true" aria-labelledby="modal-delete-title">
+  <div class="modal modal--danger" (click)="$event.stopPropagation()">
+    <div class="modal__header">
+      <div class="modal__title-group">
+        <span class="material-icons-round modal__icon modal__icon--red">warning</span>
+        <h2 id="modal-delete-title" class="modal__title">Delete User</h2>
+      </div>
+    </div>
+    <div class="modal__body">
+      <p class="modal__danger-text">
+        This will permanently delete the user record. This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" (click)="cancelDelete()">Cancel</button>
+      <button id="btn-confirm-delete" class="btn btn--danger" (click)="executeDelete()">
+        <span class="material-icons-round">delete_forever</span>
+        Confirm Deletion
+      </button>
+    </div>
   </div>
 </div>
 

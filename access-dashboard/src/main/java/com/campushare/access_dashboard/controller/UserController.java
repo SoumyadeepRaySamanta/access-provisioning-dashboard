@@ -3,13 +3,17 @@ package com.campushare.access_dashboard.controller;
 import com.campushare.access_dashboard.model.User;
 import com.campushare.access_dashboard.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin("http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200",
+             methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT,
+                        RequestMethod.DELETE, RequestMethod.OPTIONS},
+             allowedHeaders = "*")
 public class UserController {
 
     @Autowired
@@ -17,33 +21,35 @@ public class UserController {
 
     // 1. Create a User
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        User saved = userRepository.save(user);
+        return ResponseEntity.ok(saved);
     }
 
     // 2. Read all Users
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll());
     }
 
     // 3. Update a User
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
         user.setEmail(userDetails.getEmail());
         user.setDepartment(userDetails.getDepartment());
         user.setAccessRole(userDetails.getAccessRole());
         user.setActive(userDetails.isActive());
-        
-        return userRepository.save(user);
+
+        return ResponseEntity.ok(userRepository.save(user));
     }
 
     // 4. Delete a User
     @DeleteMapping("/{id}")
-    public String deleteUser(@PathVariable Long id) {
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
         userRepository.deleteById(id);
-        return "User with ID " + id + " has been completely deleted.";
+        return ResponseEntity.ok("User with ID " + id + " has been completely deleted.");
     }
 }

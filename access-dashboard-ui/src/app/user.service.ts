@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { User } from './user';
 
@@ -9,18 +9,27 @@ import { User } from './user';
 export class UserService {
   private apiUrl = 'http://localhost:8080/api/users';
 
-  constructor(private http: HttpClient) { }
+  private jsonHeaders = new HttpHeaders({ 'Content-Type': 'application/json' });
 
+  constructor(private http: HttpClient) {}
+
+  /** Fetch all provisioned users */
   getUsers(): Observable<User[]> {
     return this.http.get<User[]>(this.apiUrl);
   }
 
+  /** Provision a new user account */
   createUser(user: User): Observable<User> {
-    return this.http.post<User>(this.apiUrl, user);
+    return this.http.post<User>(this.apiUrl, user, { headers: this.jsonHeaders });
   }
 
-    deleteUser(id: number): Observable<any> {
+  /** Update an existing user's role, department, or status */
+  updateUser(id: number, user: User): Observable<User> {
+    return this.http.put<User>(`${this.apiUrl}/${id}`, user, { headers: this.jsonHeaders });
+  }
+
+  /** Hard-delete a user record (full access revocation) */
+  deleteUser(id: number): Observable<string> {
     return this.http.delete(`${this.apiUrl}/${id}`, { responseType: 'text' });
   }
-
 }
